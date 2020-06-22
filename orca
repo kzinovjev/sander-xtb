@@ -6,6 +6,7 @@ procs=${array[2]}
 
 IFS=' ' read -r -a array <<< `tail -n 1 $1`
 charge=${array[1]}
+uhf=$((array[2]-1))
 xyz=${array[3]}
 
 echo -e "\$embedding\n   interface=orca\n\$end" > xtb.input
@@ -13,7 +14,7 @@ echo -e "\$embedding\n   interface=orca\n\$end" > xtb.input
 pointcharges=`grep "%pointcharges" $1 | awk '{print $2}' | tr -d '"'`
 cp $pointcharges ${basename}.pcharge
 
-xtb --grad -c $charge -P $procs --namespace $basename --input xtb.input $xyz 2>err >out
+xtb --grad -c $charge -u $uhf -P $procs --namespace $basename --input xtb.input $xyz 2>err >out
 
 engrad=${basename}.engrad
 
