@@ -21,15 +21,15 @@ engrad=${basename}.engrad
 echo -e "# The current total energy in Eh\n" > $engrad
 IFS=' ' read -r -a array <<< `head -n 2 ${basename}.energy | tail -n 1`
 energy=${array[1]}
-echo $energy >> $engrad
+echo $energy | awk '{printf("%22.12f\n", $1)}' >> $engrad
 
 echo -e "# The current gradient in Eh/bohr\n" >> $engrad
 natoms=`head -n 1 $xyz`
-tail -n$(($natoms+1)) ${basename}.gradient | head -n$natoms | awk '{printf("%22.12f\n%22.12f\n%22.12f\n", $1, $2, $3)}' >> $engrad
+tail -n$(($natoms+1)) ${basename}.gradient | head -n$natoms | awk '{printf("%16.10f\n%16.10f\n%16.10f\n", $1, $2, $3)}' >> $engrad
 
 pcgrad=$basename.pcgrad
 cp $pcgrad tmp
 head -n 1 ${basename}.pcharge > $pcgrad
-awk '{printf("%17.12f\n%17.12f\n%17.12f\n", $1, $2, $3)}' tmp >> $pcgrad
+awk '{printf("%17.12f%17.12f%17.12f\n", $1, $2, $3)}' tmp >> $pcgrad
 
 rm tmp ${basename}.charges ${basename}.wbo ${basename}.xtbrestart ${basename}.energy ${basename}.gradient ${basename}.pcharge
