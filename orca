@@ -1,35 +1,34 @@
 #!/bin/bash
 basename=${1%.inp}
+WORKDIR=.xtb_wrapper_workdir
+mkdir -p $WORKDIR
+cd $WORKDIR
 
-IFS=' ' read -r -a array <<< `head -n 3 $1 | tail -n 1`
+IFS=' ' read -r -a array <<< `head -n 3 ../$1 | tail -n 1`
 procs=${array[2]}
 
-IFS=' ' read -r -a array <<< `tail -n 1 $1`
+IFS=' ' read -r -a array <<< `tail -n 1 ../$1`
 charge=${array[1]}
 uhf=$((array[2]-1))
 xyz=${array[3]}
 
-echo -e "\$embedding\n   interface=orca\n\$end" > xtb.input
+pointcharges=../`grep "%pointcharges" ../$1 | awk '{print $2}' | tr -d '"'`
+echo -e "\$embedding\n   interface=orca\n    input=${pointcharges}\n\$end" > xtb.input
 
-pointcharges=`grep "%pointcharges" $1 | awk '{print $2}' | tr -d '"'`
-cp $pointcharges ${basename}.pcharge
+xtb --grad -c $charge -u $uhf -P $procs --input xtb.input ../$xyz 2>err >out
 
-xtb --grad -c $charge -u $uhf -P $procs --namespace $basename --input xtb.input $xyz 2>err >out
-
-engrad=${basename}.engrad
+engrad=../${basename}.engrad
 
 echo -e "# The current total energy in Eh\n" > $engrad
-IFS=' ' read -r -a array <<< `head -n 2 ${basename}.energy | tail -n 1`
+IFS=' ' read -r -a array <<< `head -n 2 energy | tail -n 1`
 energy=${array[1]}
 echo $energy | awk '{printf("%22.12f\n", $1)}' >> $engrad
 
 echo -e "# The current gradient in Eh/bohr\n" >> $engrad
-natoms=`head -n 1 $xyz`
-tail -n$(($natoms+1)) ${basename}.gradient | head -n$natoms | awk '{printf("%16.10f\n%16.10f\n%16.10f\n", $1, $2, $3)}' >> $engrad
+natoms=`head -n 1 ../$xyz`
+tail -n$(($natoms+1)) gradient | head -n$natoms | awk '{printf("%16.10f\n%16.10f\n%16.10f\n", $1, $2, $3)}' >> $engrad
 
-pcgrad=$basename.pcgrad
-cp $pcgrad ${basename}.tmp
-head -n 1 ${basename}.pcharge > $pcgrad
-awk '{printf("%17.12f%17.12f%17.12f\n", $1, $2, $3)}' ${basename}.tmp >> $pcgrad
-
-rm ${basename}.tmp ${basename}.charges ${basename}.wbo ${basename}.xtbrestart ${basename}.energy ${basename}.gradient ${basename}.pcharge
+pcgrad=../${basename}.pcgrad
+head -n 1 $pointcharges > $pcgrad
+awk '{printf("%17.12f%17.12f%17.12f\n", $1, $2, $3)}' pcgrad >> $pcgrad
+cd ..
